@@ -42,9 +42,9 @@ function statusMessage(config: BotConfig, status: PollerStatus): string {
 
   for (const target of status.targets) {
     lines.push(
-      `· mimir\\-${target.source} \`${target.contractId}\``,
+      `· mimir\\-${target.source} \`${target.contractId}\`,`,
       `  last event ledger: ${target.lastEventLedger ?? "none seen"}`,
-      `  cursor: \`${target.cursor ?? "none (cold start)"}\``,
+      `  cursor: \`${target.cursor ?? "none (cold start)"}\`,`,
     );
     if (target.lastError) lines.push(`  last error: ${escapeMd(target.lastError)}`);
   }
@@ -97,20 +97,12 @@ export function createBot(deps: BotDeps): Bot {
 
 /** The poller's send path: one message to the configured chat. */
 export function createNotifier(bot: Bot, config: BotConfig) {
-  return async (text: string, replyToMessageId?: number): Promise<void> => {
-    const opts = {
-      parse_mode: "MarkdownV2" as const,
+  return async (text: string, reply_to_message_id?: number): Promise<void> => {
+    await bot.api.sendMessage(config.chatId, text, {
+      parse_mode: "MarkdownV2",
       link_preview_options: { is_disabled: true },
-    };
-
-    if (replyToMessageId !== undefined) {
-      opts.reply_parameters = {
-        chat_id: config.chatId,
-        message_id: replyToMessageId,
-      };
-    }
-
-    await bot.api.sendMessage(config.chatId, text, opts);
+      reply_to_message_id,
+    });
   };
 }
 
