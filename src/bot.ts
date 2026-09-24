@@ -97,11 +97,20 @@ export function createBot(deps: BotDeps): Bot {
 
 /** The poller's send path: one message to the configured chat. */
 export function createNotifier(bot: Bot, config: BotConfig) {
-  return async (text: string): Promise<void> => {
-    await bot.api.sendMessage(config.chatId, text, {
-      parse_mode: "MarkdownV2",
+  return async (text: string, replyToMessageId?: number): Promise<void> => {
+    const opts = {
+      parse_mode: "MarkdownV2" as const,
       link_preview_options: { is_disabled: true },
-    });
+    };
+
+    if (replyToMessageId !== undefined) {
+      opts.reply_parameters = {
+        chat_id: config.chatId,
+        message_id: replyToMessageId,
+      };
+    }
+
+    await bot.api.sendMessage(config.chatId, text, opts);
   };
 }
 
