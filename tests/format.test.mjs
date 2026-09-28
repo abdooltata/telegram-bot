@@ -231,6 +231,33 @@ test("createNotifier preserves Telegram send failures for the poller", async () 
   await assert.rejects(notify("message"), error);
 });
 
+test("createNotifier routes named contract sources and preserves the legacy fallback", async () => {
+  const sent = [];
+  const fakeBot = {
+    api: {
+      sendMessage: async (...args) => {
+        sent.push(args);
+        return {};
+      },
+    },
+  };
+  const notify = createNotifier(fakeBot, {
+    chatId: "-1001234567890",
+    marketChatId: "-1001111111111",
+    squadChatId: "@mimir_squad",
+  });
+
+  await notify("market event", "market");
+  await notify("squad event", "squad");
+  await notify("legacy event");
+
+  assert.deepEqual(sent.map(([chatId, text]) => [chatId, text]), [
+    ["-1001111111111", "market event"],
+    ["@mimir_squad", "squad event"],
+    ["-1001234567890", "legacy event"],
+  ]);
+});
+
 test("escapeMd handles a long adversarial string without dropping characters", () => {
   const input = reserved.repeat(10_000);
   const escaped = escapeMd(input);
@@ -257,7 +284,10 @@ test("createNotifier links to threaded replies when replyToMessageId is provided
   };
 
   const notify = createNotifier(fakeBot, config);
-  await notify("threaded message", 12345);
+  // Merged signature: the notifier keeps main's (text, source?, extra?)
+  // shape, so the thread target rides on SendExtra rather than a bare
+  // second argument.
+  await notify("threaded message", undefined, { replyToMessageId: 12345 });
 
   assert.deepEqual(sent, [
     [
